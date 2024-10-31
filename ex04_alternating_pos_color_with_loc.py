@@ -83,6 +83,7 @@ class GLWidget(qgl.QGLWidget):
         vao_ref = GL.glGenVertexArrays(1)
         GL.glBindVertexArray(vao_ref)
 
+        # the OpenGL quadrant is similar to a Cartesian plane in the range [-1, 1]
         # Set up vertex attribute #
         vertices = [[-0.5,  0.5,  0.0],    # 0 position
                  [0.0,  0.68,  0.85],  # 0 color
