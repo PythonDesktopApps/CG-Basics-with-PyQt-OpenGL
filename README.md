@@ -4,9 +4,9 @@ This is my further exploration of OpenGL. I'm exploring different scenarios to f
 
 * `ex01_base`
 * `ex02_using_location`
-* `ex03_alternating_position_color` - TODO
+* `ex03_alternating_position_color`
 * `ex04_alternating_pos_color_with_loc`
-* `ex05_separate_pos_and_color_data`
+* `ex05_separate_pos_and_color_data` - TODO
 
 
 ### References

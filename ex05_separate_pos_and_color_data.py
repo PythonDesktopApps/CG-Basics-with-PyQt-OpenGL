@@ -1,5 +1,5 @@
 # https://github.com/dimitrsh/Python-OpenGL-Triangle-Example/blob/master/triangle_test.py
-
+# this is easier than using the same array for vertex pos and colors
 import time
 import sys
 from pathlib import Path

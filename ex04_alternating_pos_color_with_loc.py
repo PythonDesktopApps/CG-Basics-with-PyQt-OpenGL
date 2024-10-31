@@ -1,6 +1,7 @@
 import time
 import sys
 from pathlib import Path
+import ctypes
 
 import numpy as np
 import PyQt5.QtWidgets as qtw
@@ -44,33 +45,26 @@ class GLWidget(qgl.QGLWidget):
 
         # Initialize program #
         vs_code = """
-        // User defined in variables
         // Position and color of vertex
-        in vec3 vPosition;
-        in vec3 vColor;
-        // Definition of uniforms
-        // Projection and model-view matrix
-        uniform mat4 pMatrix;
-        uniform mat4 mvMatrix;
+        layout (location = 0) in vec3 vPosition;
+        layout (location = 1) in vec3 vColor;
         
-        // User defined out variable
         // Color of the vertex
         out vec4 color;
         
         void main(void) {
             // Calculation of the model-view-perspective transform
-            gl_Position = pMatrix * mvMatrix * vec4(vPosition, 1.0);
+            gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);
             // The color information is forwarded in homogeneous coordinates
             color = vec4(vColor, 1.0);
         }
         """
 
         fs_code = """
-        // User defined in variable
         // Color from previous pipeline stage
         // Matches the out variable name of the vertex shader
         in vec4 color;
-        // User defined out variable, fragment color
+        // fragment color
         out vec4 FragColor;
 
         void main (void)
@@ -91,14 +85,12 @@ class GLWidget(qgl.QGLWidget):
 
         # Set up vertex attribute #
         vertices = [[-0.5,  0.5,  0.0],    # 0 position
-                [ 0.0,  0.68,  0.85],  # 0 color
-                [ 0.0, -0.5,   0.0,]   # 1 position
-                [ 0.0,  0.68,  0.85],  # 1 color
-                [ 0.5,  0.5,   0.0],   # 2 position
-                [ 0.0,  0.68,  0.85]]  # 2 color
-        
-
-        self.vertex_count = len(vertices)
+                 [0.0,  0.68,  0.85],  # 0 color
+                 [0.0, -0.5,   0.0],   # 1 position
+                 [0.0,  0.68,  0.85],  # 1 color
+                 [0.5,  0.5,   0.0],   # 2 position
+                 [0.0,  0.68,  0.85]  # 2 color
+        ]
 
         self.buffer_ref = GL.glGenBuffers(1)
 
@@ -115,19 +107,27 @@ class GLWidget(qgl.QGLWidget):
         # easier way is to use data.nbytes
         GL.glBufferData(GL.GL_ARRAY_BUFFER, data.nbytes, data.ravel(), GL.GL_STATIC_DRAW)
         
-        # associate the 'position' variable in the shader to the data above
-        variable_ref = GL.glGetAttribLocation(self.program_ref, 'position')
+        stride = int(6*32/8) # 6 values with 32 bits each, divide 8 to get bytes
+        color_offset = int(3*32/8) # the first 3 values are to be skipped since they are for position
+        buffer_offset = ctypes.c_void_p
+
         # Specify how data will be read from the currently bound buffer into the specified variable
         # 3 since we are using vec3 to represent each vertex
-        GL.glVertexAttribPointer(variable_ref, 3, GL.GL_FLOAT, False, 0, None)
+        GL.glVertexAttribPointer(0, 3, GL.GL_FLOAT, False, stride, buffer_offset(0))
+        GL.glEnableVertexAttribArray(0)
         # Indicate that data will be streamed to this variable
-        GL.glEnableVertexAttribArray(variable_ref)
+
+        # Specify how data will be read from the currently bound buffer into the specified variable
+        # 3 since we are using vec3 to represent each vertex
+        GL.glVertexAttribPointer(1, 3, GL.GL_FLOAT, False, stride, buffer_offset(color_offset))
+        GL.glEnableVertexAttribArray(1)
+        # Indicate that data will be streamed to this variable
 
     def paintGL(self):
         self.clear()
         GL.glUseProgram(self.program_ref)
-        GL.glDrawArrays(GL.GL_TRIANGLE_FAN, 0, self.vertex_count)
-        
+        GL.glDrawArrays(GL.GL_TRIANGLES, 0, 3) # 3 for 3 vertex pos
+
     # def resizeGL(self, w, h):
     #     pass
 
