@@ -8,7 +8,7 @@ This is my further exploration of OpenGL. I'm exploring different scenarios to f
 * `ex04_alternating_pos_color_with_loc`
 * `ex05_separate_pos_and_color_data`
 * `ex06_using_model_view_matrix`
-* `ex07_indices_and_triangle_strip`
+* `ex07_indices_and_triangle_strip` - TODO
 * `ex08_indices_and_primitive_restart`
 
 
