@@ -27,12 +27,7 @@ from core.attribute import Attribute
 class GLWidget(qgl.QGLWidget):
 
     def __init__(self, main_window=None, *__args):
-        # commennt for now, focus first on refactoring the actual code
-        fmt = qgl.QGLFormat()
-        fmt.setVersion(3, 3)
-        fmt.setProfile(qgl.QGLFormat.CoreProfile)
-        fmt.setSampleBuffers(True)
-        super().__init__(fmt, main_window, *__args)
+        super().__init__(main_window, *__args)
 
         self.parent = main_window
         # self.setMinimumSize(800, 800)
