@@ -50,18 +50,13 @@ class GLWidget(qgl.QGLWidget):
         // Position and color of vertex
         in vec3 vPosition;
         in vec3 vColor;
-        // Definition of uniforms
-        // Projection and model-view matrix
-        uniform mat4 pMatrix;
-        uniform mat4 mvMatrix;
         
-        // User defined out variable
         // Color of the vertex
         out vec4 color;
         
         void main(void) {
             // Calculation of the model-view-perspective transform
-            gl_Position = pMatrix * mvMatrix * vec4(vPosition, 1.0);
+            gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);
             // The color information is forwarded in homogeneous coordinates
             color = vec4(vColor, 1.0);
         }
@@ -92,43 +87,56 @@ class GLWidget(qgl.QGLWidget):
         GL.glBindVertexArray(vao_ref)
 
         # Set up vertex attribute #
-        vertices = [[-0.5,  0.5,  0.0],    # 0 position
-                [ 0.0,  0.68,  0.85],  # 0 color
-                [ 0.0, -0.5,   0.0,]   # 1 position
-                [ 0.0,  0.68,  0.85],  # 1 color
-                [ 0.5,  0.5,   0.0],   # 2 position
-                [ 0.0,  0.68,  0.85]]  # 2 color
+        vertices = [[-0.5, 0.5, 0.0],    # 0 position
+                [ 0.0, -0.5, 0.0],   # 1 position
+                [ 0.5,  0.5, 0.0]]   # 2 position
+        
+        colors = [[ 0.0, 0.68, 0.85],  # 0 color
+                [ 0.0, 0.68, 0.85],  # 1 color
+                [ 0.0, 0.68, 0.85]]  # 2 color
         
 
         self.vertex_count = len(vertices)
 
-        self.buffer_ref = GL.glGenBuffers(1)
+        self.buffer_ref = GL.glGenBuffers(2)
 
         # convert to numpy array - for convenience
-        data = np.array(vertices).astype(np.float32)
+        vertex_data = np.array(vertices).astype(np.float32)
+        color_data = np.array(colors).astype(np.float32)
 
         # upload _data to GPU
-        # Select buffer used by the following functions
-        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_ref)
-        # Store data in currently bound buffer
-        # We multiply the 18 numbers by 32 since each is float32 to get the total bits
-        # then divide by 8 since 1 byte = 8 bits
-        # size_in_bytes = int(data.size * 32/8) or 72 bytes
-        # easier way is to use data.nbytes
-        GL.glBufferData(GL.GL_ARRAY_BUFFER, data.nbytes, data.ravel(), GL.GL_STATIC_DRAW)
+        # Select first buffer for vertices
+        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_ref[0])
+        GL.glBufferData(GL.GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data.ravel(), GL.GL_STATIC_DRAW)
         
         # associate the 'position' variable in the shader to the data above
-        variable_ref = GL.glGetAttribLocation(self.program_ref, 'position')
+        pos_ref = GL.glGetAttribLocation(self.program_ref, 'vPosition')
         # Specify how data will be read from the currently bound buffer into the specified variable
         # 3 since we are using vec3 to represent each vertex
-        GL.glVertexAttribPointer(variable_ref, 3, GL.GL_FLOAT, False, 0, None)
+        # since we separate vertices and colors, there's no offset now to the vertex_data
+        GL.glVertexAttribPointer(pos_ref, 3, GL.GL_FLOAT, False, 0, None)
         # Indicate that data will be streamed to this variable
-        GL.glEnableVertexAttribArray(variable_ref)
+        GL.glEnableVertexAttribArray(pos_ref)
+
+        # upload _data to GPU
+        # Select second buffer for vertices
+        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_ref[1])
+        GL.glBufferData(GL.GL_ARRAY_BUFFER, color_data.nbytes, color_data.ravel(), GL.GL_STATIC_DRAW)
+        
+        # associate the 'position' variable in the shader to the data above
+        color_ref = GL.glGetAttribLocation(self.program_ref, 'vColor')
+        # Specify how data will be read from the currently bound buffer into the specified variable
+        # 3 since we are using vec3 to represent each vertex
+        # since we separate vertices and colors, there's no offset now to the color_data
+        GL.glVertexAttribPointer(color_ref, 3, GL.GL_FLOAT, False, 0, None)
+        # Indicate that data will be streamed to this variable
+        GL.glEnableVertexAttribArray(color_ref)
 
     def paintGL(self):
         self.clear()
         GL.glUseProgram(self.program_ref)
-        GL.glDrawArrays(GL.GL_TRIANGLE_FAN, 0, self.vertex_count)
+        # we can now use vertex_count attribute instead of hardcoding it
+        GL.glDrawArrays(GL.GL_TRIANGLES, 0, self.vertex_count)
         
     # def resizeGL(self, w, h):
     #     pass

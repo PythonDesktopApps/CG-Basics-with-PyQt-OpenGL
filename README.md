@@ -6,7 +6,10 @@ This is my further exploration of OpenGL. I'm exploring different scenarios to f
 * `ex02_using_location`
 * `ex03_alternating_position_color`
 * `ex04_alternating_pos_color_with_loc`
-* `ex05_separate_pos_and_color_data` - TODO
+* `ex05_separate_pos_and_color_data`
+* `ex06_using_model_view_matrix`
+* `ex07_indices_and_triangle_strip`
+* `ex08_indices_and_primitive_restart`
 
 
 ### References
