@@ -1,5 +1,9 @@
-# https://github.com/dimitrsh/Python-OpenGL-Triangle-Example/blob/master/triangle_test.py
-# this is easier than using the same array for vertex pos and colors
+# This is where the difference between the fixed pipeline and programmable pipeline are really highlighted
+# In fixed pipeline, we have the modelview and projection which are built-in in the fixed pipeline
+# In the programmable pipeline, these are defined in shaders
+# the final state of the modelview and projection matrices are uploaded to the uniform
+# after calculations are done, usually with numpy
+
 import time
 import sys
 from pathlib import Path
@@ -15,6 +19,7 @@ from PyQt5.uic import loadUi
 from PyQt5.QtCore import pyqtSlot
 
 import OpenGL.GL as GL
+from OpenGL import GLU
 
 package_dir = str(Path(__file__).resolve().parents[1])
 print("parent dir: ", package_dir)
@@ -145,8 +150,15 @@ class GLWidget(qgl.QGLWidget):
         # index count is 11 & 13 for the 1st and 2nd version respectively
         GL.glDrawElements(GL.GL_TRIANGLE_STRIP, self.index_count, GL.GL_UNSIGNED_INT, buffer_offset(0));
         
-    # def resizeGL(self, w, h):
-    #     pass
+    def resizeGL(self, width, height):
+        GL.glViewport(0, 0, width, height)
+        GL.glMatrixMode(GL.GL_PROJECTION)
+        GL.glLoadIdentity()
+        aspect = width / float(height)
+
+        # gluPerspective(field_of_view, aspect_ratio, z_near, z_far)
+        GLU.gluPerspective(45.0, aspect, 1.0, 100.0)
+        GL.glMatrixMode(GL.GL_MODELVIEW)
 
     def gl_settings(self):
         # self.qglClearColor(qtg.QColor(255, 255, 255))
