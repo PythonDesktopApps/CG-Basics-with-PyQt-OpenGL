@@ -1,5 +1,7 @@
 # for macOS, the use of loc in the shaders is not supported
 # not yet fully working - TODO
+# https://metamost.com/post/tech/opengl-with-python/02-opengl-with-python-pt2/
+# https://www.scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix/projection-matrix-GPU-rendering-pipeline-clipping.html
 
 import time
 import sys
@@ -192,6 +194,10 @@ class GLWidget(qgl.QGLWidget):
         p_ref = GL.glGetUniformLocation(self.program_ref, 'pMatrix')
 
         # the use of uniforms only works in the paintGL
+        # OpenGL (and vectors) operate using column-major order. Therefore, if you're using row vectors, as in our examples,
+        # you'll need to transpose the matrix first. Hence, the GL.GL_TRUE
+        # for the 1D vectors, the transpose is implicit in the shader code
+
         GL.glUniformMatrix4fv(mv_ref, 1, GL.GL_TRUE, self.mv_matrix)
         GL.glUniformMatrix4fv(p_ref, 1, GL.GL_TRUE, self.p_matrix)
         
