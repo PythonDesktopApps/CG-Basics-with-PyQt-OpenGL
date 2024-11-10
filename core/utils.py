@@ -1,5 +1,5 @@
 import OpenGL.GL as GL
-
+from platform import system
 from collections import namedtuple
 
 
@@ -33,7 +33,10 @@ class Utils:
         # shader_code = shader_code % (major, minor)
 
         # uniform loc is only supported in versions higher than 330
-        shader_code = '#version 430 core\n' + shader_code
+        if system() == 'Darwin':
+            shader_code = '#version 410 core\n' + shader_code
+        else:
+            shader_code = '#version 430 core\n' + shader_code
         # Create empty shader object and return reference value
         shader_ref = GL.glCreateShader(shader_type)
         # Stores the source code in the shader

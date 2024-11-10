@@ -1,6 +1,10 @@
+# for macOS, the use of loc in the shaders is not supported
+# not yet fully working - TODO
+
 import time
 import sys
 from pathlib import Path
+import math
 from platform import system
 from ctypes import c_void_p as buffer_offset
 
@@ -22,12 +26,13 @@ if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
 from core.utils import Utils
-from core.attribute import Attribute
+
+os_platform = system()
 
 class GLWidget(qgl.QGLWidget):
 
     def __init__(self, main_window=None, *__args):
-        if system() == 'Darwin':
+        if os_platform == 'Darwin':
             fmt = qgl.QGLFormat()
             fmt.setVersion(4, 1)
             fmt.setProfile(qgl.QGLFormat.CoreProfile)
@@ -48,92 +53,151 @@ class GLWidget(qgl.QGLWidget):
 
         # Initialize program #
         vs_code = """
-        // Position and color of vertex
-        in vec3 vPosition;
-        in vec3 vColor;
-        
-        // Color of the vertex
-        out vec4 color;
-        
-        void main(void) {
-            // Calculation of the model-view-perspective transform
-            gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);
-            // The color information is forwarded in homogeneous coordinates
-            color = vec4(vColor, 1.0);
-        }
-        """
+            in vec3 vPosition;
+            in vec3 vColor;
+            // Definition of uniforms
+            // Projection and model-view matrix
+            uniform mat4 mvMatrix;
+            uniform mat4 pMatrix;
 
+            // User defined out variable
+            // Color of the vertex
+            out vec4 color;
+
+            void main(void) {
+                // Calculation of the model-view-perspective transform
+                gl_Position = pMatrix * mvMatrix * vec4(vPosition, 1.0);
+                // The color information is forwarded in homogeneous coordinates
+                color = vec4(vColor, 1.0);
+            }
+        """
         fs_code = """
-        // Color from previous pipeline stage
-        // Matches the out variable name of the vertex shader
-        in vec4 color;
-        // fragment color
-        out vec4 FragColor;
-
-        void main (void)
-        {
-            // The input fragment color is forwarded
-            // to the next pipeline stage
-            FragColor = color;
-        }
+            in vec4 color;
+            out vec4 FragColor;
+            
+            void main (void)
+            {
+                // The input fragment color is forwarded
+                // to the next pipeline stage
+                FragColor = color;
+            }
         """
-
         self.program_ref = Utils.initialize_program(vs_code, fs_code)
-        # Render settings (optional) #
-        # on Mac, only 1px line is allowed
-        GL.glLineWidth(1)
-        # Set up vertex array object #
+
+        if os_platform == 'Darwin':
+            GL.glLineWidth(1)
+        else:
+            GL.glLineWidth(2)
+
+        # VAO - like container for VBOs
         vao_ref = GL.glGenVertexArrays(1)
         GL.glBindVertexArray(vao_ref)
 
+        # color variable sfor reused
+        c0 =  [0.3, 0.80, 0.1]
+        c1 =  [0.89, 0.74, 0.26]
+        c2 =  [0.81, 0.65, 0.16]
+        c3 =  [0.68, 0.62, 0.10]
+        c4 =  [0.48, 0.59, 0.17]
+
         # Set up vertex attribute #
-        vertices = [[-0.5,  0.5,  0.0],    # 0 position
-                 [0.0,  0.68,  0.85],  # 0 color
-                 [0.0, -0.5,   0.0],   # 1 position
-                 [0.0,  0.68,  0.85],  # 1 color
-                 [0.5,  0.5,   0.0],   # 2 position
-                 [0.0,  0.68,  0.85]  # 2 color
+        vertices = [
+            0.0, 4.0, -1.0, c0[0], c0[1], c0[2],
+            2.0, 4.0, -0.6, c1[0], c1[1], c1[2],
+            4.0, 4.0, -0.4, c2[0], c2[1], c2[2],
+            0.0, 2.0, -1.0, c1[0], c1[1], c1[2],
+            2.0, 2.0,  0.0, c2[0], c2[1], c2[2],
+            4.0, 2.0, -0.6, c0[0], c0[1], c0[2],
+            0.0, 0.0, -1.2, c3[0], c3[1], c3[2],
+            2.0, 0.0, -0.8, c4[0], c4[1], c4[2],
+            4.0, 0.0, -1.2, c4[0], c4[1], c4[2]
         ]
 
-        self.buffer_ref = GL.glGenBuffers(1)
+        # Indices into the VBO for using TRIANGLES
+        indices = [
+            0, 3, 1,
+            3, 4, 1,
+            1, 4, 2,
+            4, 5, 2,
+            3, 6, 7,
+            3, 7, 4,
+            4, 7, 8,
+            4, 8, 5
+        ]
+        
+        # index_count is correct at 24 since indices are not list of list
+        self.index_count = len(indices)
+
+        self.vertex_buffer = GL.glGenBuffers(1)
+        self.index_buffer = GL.glGenBuffers(1)
 
         # convert to numpy array - for convenience
-        data = np.array(vertices).astype(np.float32)
+        vertex_data= np.array(vertices).astype(np.float32)
+        index_data= np.array(indices).astype(np.uint32)
 
         # upload _data to GPU
-        # Select buffer used by the following functions
-        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_ref)
-        # Store data in currently bound buffer
-        # We multiply the 18 numbers by 32 since each is float32 to get the total bits
-        # then divide by 8 since 1 byte = 8 bits
-        # size_in_bytes = int(data.size * 32/8) or 72 bytes
-        # easier way is to use data.nbytes
-        GL.glBufferData(GL.GL_ARRAY_BUFFER, data.nbytes, data.ravel(), GL.GL_STATIC_DRAW)
-        
+        # Select first buffer for vertices
+        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.vertex_buffer)
+        GL.glBufferData(GL.GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data, GL.GL_STATIC_DRAW)
+
+        # activate and initialize index buffer object (IBO)
+        GL.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, self.index_buffer);
+        # integers use 4 bytes in Java
+        GL.glBufferData(GL.GL_ELEMENT_ARRAY_BUFFER, index_data.nbytes, index_data, GL.GL_STATIC_DRAW)
+
         stride = int(6*32/8) # 6 values with 32 bits each, divide 8 to get bytes
         color_offset = int(3*32/8) # the first 3 values are to be skipped since they are for position
-
-        # associate the 'position' variable in the shader to the data above
-        pos_ref = GL.glGetAttribLocation(self.program_ref, 'vPosition')
+        
         # Specify how data will be read from the currently bound buffer into the specified variable
         # 3 since we are using vec3 to represent each vertex
-        GL.glVertexAttribPointer(pos_ref, 3, GL.GL_FLOAT, False, stride, buffer_offset(0))
+        GL.glVertexAttribPointer(0, 3, GL.GL_FLOAT, False, stride, buffer_offset(0))
         # Indicate that data will be streamed to this variable
-        GL.glEnableVertexAttribArray(pos_ref)
+        GL.glEnableVertexAttribArray(0)
 
-
-        color_ref = GL.glGetAttribLocation(self.program_ref, 'vColor')
         # Specify how data will be read from the currently bound buffer into the specified variable
         # 3 since we are using vec3 to represent each vertex
-        GL.glVertexAttribPointer(color_ref, 3, GL.GL_FLOAT, False, stride, buffer_offset(color_offset))
+        GL.glVertexAttribPointer(1, 3, GL.GL_FLOAT, False, stride, buffer_offset(color_offset))
         # Indicate that data will be streamed to this variable
-        GL.glEnableVertexAttribArray(color_ref)
+        GL.glEnableVertexAttribArray(1)
+
+        ### Set up model matrix
+        # move -1 units i z direction (z is direction to screen)
+        self.mv_matrix = np.array(
+            [[1, 0, 0, 0],
+             [0, 1, 0, 0],
+             [0, 0, 1, -1],
+             [0, 0, 0, 1]]
+        ).astype(np.float32)
+
+        far, near = 1000, 0.1
+        aspect_ratio = 1
+        # convert to radians
+        a = 60 * math.pi / 180.0
+        d = 1.0 / math.tan(a / 2)
+        b = (far + near) / (near - far)
+        c = 2 * far * near / (near - far)
+        self.p_matrix = np.array(
+            [[d / aspect_ratio, 0, 0, 0],
+             [0, d, 0, 0],
+             [0, 0, b, c],
+             [0, 0, -1, 0]]
+        ).astype(np.float32)
+    
 
     def paintGL(self):
         self.clear()
         GL.glUseProgram(self.program_ref)
-        GL.glDrawArrays(GL.GL_TRIANGLES, 0, 3) # 3 for 3 vertex pos
 
+        mv_ref = GL.glGetUniformLocation(self.program_ref, 'mvMatrix')
+        p_ref = GL.glGetUniformLocation(self.program_ref, 'pMatrix')
+
+        # the use of uniforms only works in the paintGL
+        GL.glUniformMatrix4fv(mv_ref, 1, GL.GL_TRUE, self.mv_matrix)
+        GL.glUniformMatrix4fv(p_ref, 1, GL.GL_TRUE, self.p_matrix)
+        
+        # 24 because we have 8 triangles with 3 vertex each
+        GL.glDrawElements(GL.GL_TRIANGLES, self.index_count, GL.GL_UNSIGNED_INT, buffer_offset(0));
+        
     # def resizeGL(self, w, h):
     #     pass
 
