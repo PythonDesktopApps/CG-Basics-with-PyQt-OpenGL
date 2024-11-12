@@ -90,9 +90,9 @@ class Matrix:
         ).astype(float)
 
     @staticmethod
-    def make_look_at(position, target):
+    def make_look_at(global_pos, target_pos):
         world_up = [0, 1, 0]
-        forward = np.subtract(target, position)
+        forward = np.subtract(target_pos, global_pos)
         right = np.cross(forward, world_up)
         # If forward and world_up vectors are parallel,
         # the right vector is zero.
@@ -106,8 +106,8 @@ class Matrix:
         right = np.divide(right, np.linalg.norm(right))
         up = np.divide(up, np.linalg.norm(up))
         return np.array(
-            [[right[0], up[0], -forward[0], position[0]],
-             [right[1], up[1], -forward[1], position[1]],
-             [right[2], up[2], -forward[2], position[2]],
+            [[right[0], up[0], -forward[0], global_pos[0]],
+             [right[1], up[1], -forward[1], global_pos[1]],
+             [right[2], up[2], -forward[2], global_pos[2]],
              [0, 0, 0, 1]]
         ).astype(float)

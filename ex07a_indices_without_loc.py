@@ -28,6 +28,7 @@ if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
 from core.utils import Utils
+from core.matrix import Matrix
 
 os_platform = system()
 
@@ -163,27 +164,15 @@ class GLWidget(qgl.QGLWidget):
         GL.glEnableVertexAttribArray(1)
 
         ### Set up model matrix
-        # move -1 units i z direction (z is direction to screen)
-        self.mv_matrix = np.array(
-            [[1, 0, 0, 0],
-             [0, 1, 0, 0],
-             [0, 0, 1, -1],
-             [0, 0, 0, 1]]
-        ).astype(np.float32)
+        global_pos = [0, 0, -10]
 
-        far, near = 1000, 0.1
-        aspect_ratio = 1
-        # convert to radians
-        a = 60 * math.pi / 180.0
-        d = 1.0 / math.tan(a / 2)
-        b = (far + near) / (near - far)
-        c = 2 * far * near / (near - far)
-        self.p_matrix = np.array(
-            [[d / aspect_ratio, 0, 0, 0],
-             [0, d, 0, 0],
-             [0, 0, b, c],
-             [0, 0, -1, 0]]
-        ).astype(np.float32)
+        # understand this part more - maybe add the controls?
+        target_pos = [0, 0, 0]
+        self.mv_matrix = Matrix.make_look_at(global_pos, target_pos)
+        self.p_matrix = Matrix.make_perspective()
+        
+        print(self.mv_matrix)
+        print(self.p_matrix)
     
 
     def paintGL(self):

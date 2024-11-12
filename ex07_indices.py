@@ -23,6 +23,7 @@ if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
 from core.utils import Utils
+from core.matrix import Matrix
 
 buffer_offset = ctypes.c_void_p
 
@@ -74,7 +75,8 @@ class GLWidget(qgl.QGLWidget):
         """
         self.program_ref = Utils.initialize_program(vs_code, fs_code)
 
-        GL.glLineWidth(2)
+        GL.glLineWidth(3)
+        GL.glPolygonMode(GL.GL_FRONT_AND_BACK, GL.GL_LINE);
 
         # VAO - like container for VBOs
         vao_ref = GL.glGenVertexArrays(1)
@@ -148,30 +150,16 @@ class GLWidget(qgl.QGLWidget):
         GL.glEnableVertexAttribArray(1)
 
         ### Set up model matrix
-        # move -1 units i z direction (z is direction to screen)
-        self.m_matrix = np.array(
-            [[1, 0, 0, 0],
-             [0, 1, 0, 0],
-             [0, 0, 1, -1],
-             [0, 0, 0, 1]]
-        ).astype(np.float32)
+        # understand this more, why larger will make it zoom out
+        global_pos = [0, 0, -10]
 
-        # no need since we're using loc in shaders
-        # self.m_matrix_ref = GL.glGetUniformLocation(self.program_ref, 'modelMatrix')
-
-        far, near = 1000, 0.1
-        aspect_ratio = 1
-        # convert to radians
-        a = 60 * math.pi / 180.0
-        d = 1.0 / math.tan(a / 2)
-        b = (far + near) / (near - far)
-        c = 2 * far * near / (near - far)
-        self.p_matrix = np.array(
-            [[d / aspect_ratio, 0, 0, 0],
-             [0, d, 0, 0],
-             [0, 0, b, c],
-             [0, 0, -1, 0]]
-        ).astype(np.float32)
+        # understand this part more - maybe add the controls?
+        target_pos = [0, 0, 0]
+        self.mv_matrix = Matrix.make_look_at(global_pos, target_pos)
+        self.p_matrix = Matrix.make_perspective()
+        
+        print(self.mv_matrix)
+        print(self.p_matrix)
     
         # self.p_matrix_ref = GL.glGetUniformLocation(self.program_ref, 'projectionMatrix')
 
@@ -180,7 +168,7 @@ class GLWidget(qgl.QGLWidget):
         GL.glUseProgram(self.program_ref)
 
         # the use of uniforms only works in the paintGL
-        GL.glUniformMatrix4fv(0, 1, GL.GL_TRUE, self.m_matrix)
+        GL.glUniformMatrix4fv(0, 1, GL.GL_TRUE, self.mv_matrix)
         GL.glUniformMatrix4fv(1, 1, GL.GL_TRUE, self.p_matrix)
         
         # 24 because we have 8 triangles with 3 vertex each
