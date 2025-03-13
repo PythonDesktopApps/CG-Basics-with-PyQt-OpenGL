@@ -6,6 +6,7 @@
 import time
 import sys
 from pathlib import Path
+import platform as pl
 import math
 from platform import system
 from ctypes import c_void_p as buffer_offset
@@ -30,19 +31,23 @@ if package_dir not in sys.path:
 from core.utils import Utils
 from core.matrix import Matrix
 
-os_platform = system()
-
 class GLWidget(qgl.QGLWidget):
 
     def __init__(self, main_window=None, *__args):
-        if os_platform == 'Darwin':
+        is_macos_intel = (pl.platform() == 'Darwin' and pl.machine() == 'x86_64')
+        is_windows = pl.platform() == 'Windows'
+
+        if is_macos_intel:
             fmt = qgl.QGLFormat()
             fmt.setVersion(4, 1)
+            # note that if you set CompatibilityProfile in mac, you will not be able to use version 4.1
             fmt.setProfile(qgl.QGLFormat.CoreProfile)
             fmt.setSampleBuffers(True)
             super().__init__(fmt, main_window, *__args)
-        else:
+        elif is_windows:
             super().__init__(main_window, *__args)
+        else:
+            raise NotImplementedError('App not supported in your platform.')
 
         self.parent = main_window
         # self.setMinimumSize(800, 800)
