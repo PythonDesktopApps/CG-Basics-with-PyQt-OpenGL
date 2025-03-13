@@ -85,7 +85,15 @@ class Utils:
 
     @staticmethod
     def is_macos_intel():
-        if (system() == 'Darwin' and machine() == 'x86_64'):
+        return (system() == 'Darwin' and machine() == 'x86_64')
+
+    @staticmethod
+    def is_windows():
+        return system() == 'Windows'
+
+    @staticmethod
+    def get_gl_format():
+        if Utils.is_macos_intel():
             fmt = qgl.QGLFormat()
             fmt.setVersion(4, 1)
             # note that if you set CompatibilityProfile in mac, you will not be able to use version 4.1
