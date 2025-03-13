@@ -1,5 +1,6 @@
 import OpenGL.GL as GL
-from platform import system
+import PyQt5.QtOpenGL as qgl
+from platform import system, machine
 from collections import namedtuple
 
 
@@ -81,3 +82,13 @@ class Utils:
             raise Exception(error_message)
         # Linking was successful; return program reference value
         return program_ref
+
+    @staticmethod
+    def is_macos_intel():
+        if (system() == 'Darwin' and machine() == 'x86_64'):
+            fmt = qgl.QGLFormat()
+            fmt.setVersion(4, 1)
+            # note that if you set CompatibilityProfile in mac, you will not be able to use version 4.1
+            fmt.setProfile(qgl.QGLFormat.CoreProfile)
+            fmt.setSampleBuffers(True)
+            return fmt
